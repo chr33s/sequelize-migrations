@@ -11,18 +11,23 @@
       "allowNull": false,
       "unique": true
     },
-    "name": {
-      "type": {
-        "key": "STRING",
-        "options": {}
-      }
-    },
     "description": {
       "type": {
-        "key": "TEXT",
-        "options": {}
+        "key": "STRING",
+        "options": {
+          "length": 100
+        }
       },
       "allowNull": false
+    },
+    "age": {
+      "type": {
+        "key": "INTEGER",
+        "options": {
+          "length": 3
+        }
+      },
+      "defaultValue": 1
     },
     "created_at": {
       "type": {

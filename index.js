@@ -53,6 +53,57 @@ module.exports = {
 }
 `
 
+const update = `
+'use strict'
+
+module.exports = {
+  up: (query, DataTypes) => Promise.all([
+    {% for column in options -%}
+       query.{{ column.action }}Column(
+        '{{ table }}',
+        '{{ column.name }}',
+        {%- if column.action !== 'remove' %}
+          {
+            {% for key, val in column.options -%}
+              {{ key }}:
+                {% if key|DataType(val) -%}
+                  DataTypes.{{ val.key }}({{ val.options|dump|safe }}),
+                {% else %}
+                  {{ val|dump|safe }},
+                {% endif %}
+            {%- endfor %}
+          }
+        {% endif -%}
+      ),
+    {% endfor %}
+  ]),
+
+  down: (query, DataTypes) => Promise.all([
+    {% for column in options -%}
+      query.
+        {% if column.action === 'add' %}remove{% elif column.action === 'remove' %}add{% else %}{{ column.action }}{% endif %}Column(
+        '{{ table }}',
+        '{{ column.name }}',
+        {%- if column.action !== 'add' %}
+        {
+          {% for key, val in column.options -%}
+            {{ key }}:
+              {% if key|DataType(val) -%}
+                DataTypes.{% if val._key %}{{ val._key }}{% else %}{{ val.key }}{% endif %}(
+                  {{ val.options|dump|safe }}
+                ),
+              {% else %}
+                {{ val|dump|safe }},
+              {% endif %}
+          {%- endfor %}
+        }
+        {% endif -%}
+      ),
+    {% endfor %}
+  ])
+}
+`
+
 class Migration {
   constructor(options) {
     const { path = 'migrations', sequelize, log = false } = options || {}
@@ -62,7 +113,7 @@ class Migration {
     this.log = log
     this.path = path
     this.sequelize = sequelize
-    this.templates = { create, remove }
+    this.templates = { create, remove, update }
     this.timestamp = new Date().toISOString().replace(/[^\d]/g, '')
     this.umzug = new Umzug({
       logging: this.log,
@@ -182,36 +233,67 @@ class Migration {
   }
 
   sync() {
-    const schema = this.stringify(this.schema())
+    const schema = this.schema()
     const _schema = this.read('schema.json')
-    const _diff = diff(this.parse(_schema), this.parse(schema)) // JSON.parse -> rm: undefined
+    const _diff = diff(this.parse(_schema), this.parse(this.stringify(schema))) // JSON.parse -> rm: undefined
     const batch = {}
 
     for (let i in _diff) {
       let d = _diff[i]
-      let [table, field] = d.path
+      let [table, field, name, prop, attr] = d.path
+
+      console.log(table, field, name, prop, attr, d)
+
+      if (!batch[table]) {
+        batch[table] = {
+          options: []
+        }
+      }
 
       switch (d.kind) {
         case 'N':
           if (!field) {
-            batch[table] = {
-              action: 'create',
-              options: d.rhs
-            }
+            batch[table].action = 'create'
+            batch[table].options = d.rhs
+          } else {
+            if (attr) break
+
+            batch[table].action = 'update'
+            batch[table].options.push({
+              action: 'add',
+              options: d.rhs,
+              name: field
+            })
           }
           break
         case 'D':
           if (!field) {
-            if (!batch[table]) {
-              batch[table] = {
-                action: 'remove',
-                options: {}
-              }
-            }
+            batch[table].action = 'remove'
             batch[table].options = d.lhs
+          } else {
+            batch[table].action = 'update'
+            batch[table].options.push({
+              action: 'remove',
+              options: d.lhs,
+              name: field
+            })
           }
           break
         case 'E':
+          if (field) {
+            batch[table].action = 'update'
+            batch[table].options.push({
+              action: 'change',
+              options: {
+                [name]: {
+                  key: name === 'type' ? schema[table][field].type.key : null,
+                  [`_${prop}`]: d.lhs,
+                  [prop]: d.rhs
+                }
+              },
+              name: field
+            })
+          }
           break
         case 'A':
           break
@@ -221,6 +303,8 @@ class Migration {
     for (let table in batch) {
       let { action, options } = batch[table]
 
+      console.log(table, action, options)
+
       const template = this.template(action).render({ table, options })
       const path = `${this.timestamp}-${action}-${table}.js`
       const migration = this.format(template)
@@ -228,7 +312,7 @@ class Migration {
       this.write(path, migration)
     }
 
-    this.write('schema.json', schema)
+    this.write('schema.json', this.stringify(schema))
   }
 
   run(options) {

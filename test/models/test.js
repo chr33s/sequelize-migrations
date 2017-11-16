@@ -16,10 +16,13 @@ class Test extends Model {
             isUUID: 4
           }
         },
-        name: DataTypes.STRING,
         description: {
-          type: DataTypes.TEXT,
+          type: DataTypes.STRING(100),
           allowNull: false
+        },
+        age: {
+          type: DataTypes.INTEGER(3),
+          defaultValue: 1
         }
       },
       { sequelize }
