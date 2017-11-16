@@ -1,0 +1,31 @@
+{
+  "name": "@chr33s/sequelize-migrations",
+  "version": "0.0.1",
+  "description": "synced sequelize model migrations",
+  "main": "index.js",
+  "scripts": {
+    "clean": "rm -rf test/models/migrations/*.{js,json}",
+    "test": "node test"
+  },
+  "author": "chris",
+  "homepage": "https://github.com/chr33s/sequelize-migrations",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chr33s/sequelize-migrations.git"
+  },
+  "keywords": [
+    "sequelize",
+    "migrations"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "mysql2": "^1.5.0",
+    "sequelize": "^4.22.7"
+  },
+  "dependencies": {
+    "deep-diff": "^0.3.8",
+    "nunjucks": "^3.0.1",
+    "prettier": "^1.8.2",
+    "umzug": "^2.1.0"
+  }
+}

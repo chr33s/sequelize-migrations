@@ -1,0 +1,54 @@
+{
+  "tests": {
+    "id": {
+      "type": {
+        "key": "UUID"
+      },
+      "defaultValue": {
+        "key": "UUIDV4"
+      },
+      "primaryKey": true,
+      "allowNull": false,
+      "unique": true
+    },
+    "name": {
+      "type": {
+        "key": "STRING",
+        "options": {}
+      }
+    },
+    "description": {
+      "type": {
+        "key": "TEXT",
+        "options": {}
+      },
+      "allowNull": false
+    },
+    "created_at": {
+      "type": {
+        "key": "DATE",
+        "options": {}
+      },
+      "allowNull": false
+    },
+    "updated_at": {
+      "type": {
+        "key": "DATE",
+        "options": {}
+      },
+      "allowNull": false
+    }
+  },
+  "sequelize_meta": {
+    "name": {
+      "type": {
+        "key": "STRING",
+        "options": {}
+      },
+      "allowNull": false,
+      "unique": true,
+      "primaryKey": true,
+      "autoIncrement": false
+    }
+  }
+}
