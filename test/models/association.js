@@ -2,7 +2,7 @@
 
 const { DataTypes, Model } = require('sequelize')
 
-class Test extends Model {
+class Association extends Model {
   static init(sequelize) {
     super.init(
       {
@@ -30,8 +30,8 @@ class Test extends Model {
   }
 
   static associate(models) {
-    Test.hasMany(models.Association)
+    Association.belongsTo(models.Test)
   }
 }
 
-module.exports = () => Test
+module.exports = () => Association

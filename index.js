@@ -134,7 +134,7 @@ class Migration {
       'primaryKey',
       'autoIncrement',
       'defaultValue',
-      // 'references',
+      'references',
       'onDelete',
       'onUpdate'
     ]
@@ -168,10 +168,8 @@ class Migration {
                 continue
               }
 
-              schema[table][column][property] = {
-                key: val.key,
-                options: val.options
-              }
+              const { key, model, options } = val
+              schema[table][column][property] = { key, model, options }
             } else {
               schema[table][column][property] = val
             }
