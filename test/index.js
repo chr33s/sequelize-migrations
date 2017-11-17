@@ -6,7 +6,6 @@ const path = require('path')
 
 const migrations = new Migration({
   path: path.join(__dirname, 'models', 'migrations'),
-  log: console.log,
   sequelize
 })
 

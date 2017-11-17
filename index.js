@@ -106,13 +106,13 @@ module.exports = {
 
 class Migration {
   constructor(options) {
-    const { path = 'migrations', sequelize, log = false } = options || {}
+    const { path = 'migrations', sequelize } = options || {}
 
     if (!this.exists(path)) throw new Error(`${path} does not exists`)
 
-    this.log = log
     this.path = path
     this.sequelize = sequelize
+    this.log = sequelize.options.logging
     this.templates = { create, remove, update }
     this.timestamp = new Date().toISOString().replace(/[^\d]/g, '')
     this.umzug = new Umzug({
