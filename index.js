@@ -313,7 +313,13 @@ class Migration {
     this.write('schema.json', this.stringify(schema))
   }
 
-  run(options) {
+  run(fn, options) {
+    if (options && this[fn]) return this[fn](options)
+
+    return Promise.resolve()
+  }
+
+  migrate(options) {
     return this.umzug.up(options)
   }
 

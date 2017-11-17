@@ -3,8 +3,12 @@
   "version": "0.0.1",
   "description": "synced sequelize model migrations",
   "main": "index.js",
+  "bin": {
+    "migration": "./bin/migrations.js"
+  },
   "scripts": {
     "clean": "rm -rf test/models/migrations/*.{js,json}",
+    "migration": "./bin/migrations.js",
     "test": "node test"
   },
   "author": "chris",
@@ -26,6 +30,7 @@
     "deep-diff": "^0.3.8",
     "nunjucks": "^3.0.1",
     "prettier": "^1.8.2",
-    "umzug": "^2.1.0"
+    "umzug": "^2.1.0",
+    "yargs": "^10.0.3"
   }
 }
