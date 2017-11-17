@@ -9,7 +9,7 @@
   "scripts": {
     "clean": "rm -rf test/models/migrations/*.{js,json}",
     "migration": "./bin/migrations.js",
-    "test": "node test"
+    "test": "mocha --exit test"
   },
   "author": "chris",
   "homepage": "https://github.com/chr33s/sequelize-migrations",
@@ -23,6 +23,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "mocha": "^4.0.1",
     "mysql2": "^1.5.0",
     "sequelize": "^4.22.7"
   },

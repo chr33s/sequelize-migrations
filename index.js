@@ -215,7 +215,7 @@ class Migration {
   run(fn, options) {
     if (options && this[fn]) return this[fn](options)
 
-    return Promise.resolve()
+    return Promise.resolve(false)
   }
 
   migrate(options) {
