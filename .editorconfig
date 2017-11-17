@@ -1,0 +1,6 @@
+# editorconfig.org
+root = false 
+
+[*.njk]
+insert_final_newline = false
+

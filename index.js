@@ -1,108 +1,16 @@
 'use strict'
 
-const { Environment, Template } = require('nunjucks')
+const { Template } = require('nunjucks')
 const { diff } = require('deep-diff')
 const prettier = require('prettier')
 const { join } = require('path')
 const Umzug = require('umzug')
 const fs = require('fs')
 
-const create = `
-'use strict'
-
-module.exports = {
-  up: (query, DataTypes) => query.createTable('{{ table }}', {
-    {% for field, option in options -%}
-      {{ field }}: {
-        {% for key, val in option -%}
-          {{ key }}:
-            {% if key|DataType(val) -%}
-              DataTypes.{{ val.key }}({{ val.options|dump|safe }}),
-            {% else %}
-              {{ val|dump|safe }},
-            {% endif %}
-        {%- endfor %}
-      },
-    {% endfor %}
-  }),
-
-  down: (query, DataTypes) => query.dropTable('{{ table }}')
+const templates = {
+  table: fs.readFileSync('./template/table.njk', 'utf8'),
+  column: fs.readFileSync('./template/column.njk', 'utf8')
 }
-`
-
-const remove = `
-'use strict'
-
-module.exports = {
-  up: (query, DataTypes) => query.dropTable('{{ table }}'),
-
-  down: (query, DataTypes) => query.createTable('{{ table }}', {
-    {% for field, option in options -%}
-      {{ field }}: {
-        {% for key, val in option -%}
-          {{ key }}:
-            {% if key|DataType(val) -%}
-              DataTypes.{{ val.key }}({{ val.options|dump|safe }}),
-            {% else %}
-              {{ val|dump|safe }},
-            {% endif %}
-        {%- endfor %}
-      },
-    {% endfor %}
-  })
-}
-`
-
-const update = `
-'use strict'
-
-module.exports = {
-  up: (query, DataTypes) => Promise.all([
-    {% for column in options -%}
-       query.{{ column.action }}Column(
-        '{{ table }}',
-        '{{ column.name }}',
-        {%- if column.action !== 'remove' %}
-          {
-            {% for key, val in column.options -%}
-              {{ key }}:
-                {% if key|DataType(val) -%}
-                  DataTypes.{{ val.key }}({{ val.options|dump|safe }}),
-                {% else %}
-                  {{ val|dump|safe }},
-                {% endif %}
-            {%- endfor %}
-          }
-        {% endif -%}
-      ),
-    {% endfor %}
-  ]),
-
-  down: (query, DataTypes) => Promise.all([
-    {% for column in options -%}
-      query.
-        {% if column.action === 'add' %}remove{% elif column.action === 'remove' %}add{% else %}{{ column.action }}{% endif %}Column(
-        '{{ table }}',
-        '{{ column.name }}',
-        {%- if column.action !== 'add' %}
-        {
-          {% for key, val in column.options -%}
-            {{ key }}:
-              {% if key|DataType(val) -%}
-                DataTypes.{% if val._key %}{{ val._key }}{% else %}{{ val.key }}{% endif %}(
-                  {{ val.options|dump|safe }}
-                ),
-              {% else %}
-                {{ val|dump|safe }},
-              {% endif %}
-          {%- endfor %}
-        }
-        {% endif -%}
-      ),
-    {% endfor %}
-  ])
-}
-`
 
 class Migration {
   constructor(options) {
@@ -112,8 +20,8 @@ class Migration {
 
     this.path = path
     this.sequelize = sequelize
+    this.templates = templates
     this.log = sequelize.options.logging
-    this.templates = { create, remove, update }
     this.timestamp = new Date().toISOString().replace(/[^\d]/g, '')
     this.umzug = new Umzug({
       logging: this.log,
@@ -188,20 +96,8 @@ class Migration {
     })
   }
 
-  dataType(key, val) {
-    return (
-      typeof val === 'object' &&
-      val !== null &&
-      ['type', 'defaultValue'].includes(key)
-    )
-  }
-
   template(type) {
-    const env = new Environment()
-
-    env.addFilter('DataType', this.dataType)
-
-    return new Template(this.templates[type], env)
+    return new Template(this.templates[type])
   }
 
   stringify(json) {
@@ -251,12 +147,12 @@ class Migration {
       switch (d.kind) {
         case 'N':
           if (!field) {
-            batch[table].action = 'create'
+            batch[table].action = 'table'
             batch[table].options = d.rhs
           } else {
             if (attr) break
 
-            batch[table].action = 'update'
+            batch[table].action = 'column'
             batch[table].options.push({
               action: 'add',
               options: d.rhs,
@@ -266,10 +162,13 @@ class Migration {
           break
         case 'D':
           if (!field) {
-            batch[table].action = 'remove'
+            batch[table].create = false
+            batch[table].action = 'table'
             batch[table].options = d.lhs
           } else {
-            batch[table].action = 'update'
+            if (attr) break
+
+            batch[table].action = 'column'
             batch[table].options.push({
               action: 'remove',
               options: d.lhs,
@@ -279,7 +178,7 @@ class Migration {
           break
         case 'E':
           if (field) {
-            batch[table].action = 'update'
+            batch[table].action = 'column'
             batch[table].options.push({
               action: 'change',
               options: {
@@ -299,11 +198,11 @@ class Migration {
     }
 
     for (let table in batch) {
-      let { action, options } = batch[table]
+      let { create = true, action, options } = batch[table]
 
       console.log(table, action, options)
 
-      const template = this.template(action).render({ table, options })
+      const template = this.template(action).render({ create, table, options })
       const path = `${this.timestamp}-${action}-${table}.js`
       const migration = this.format(template)
 
