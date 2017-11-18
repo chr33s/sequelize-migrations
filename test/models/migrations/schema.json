@@ -71,9 +71,7 @@
     "description": {
       "type": {
         "key": "STRING",
-        "options": {
-          "length": 100
-        }
+        "options": {}
       },
       "allowNull": false
     },

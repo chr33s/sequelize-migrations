@@ -1,0 +1,40 @@
+'use strict'
+
+module.exports = {
+  {%- for direction, properties in migration %}
+    {{ direction }}: (query, DataTypes) =>
+      {%- for type, tables in properties %}
+        {%- for action, actions in tables %}
+          query.{{ action }}{{ type }}(
+            {%- for table, columns in actions %}
+              '{{ table }}',
+              {%- if action !== 'drop' %}
+                {% if action === 'create' %} { {%- endif -%}
+                {%- for column, attributes in columns -%}
+                  {%- if ['add', 'change', 'remove'].includes(action) %}
+                    '{{ column }}',
+                  {%- endif -%}
+                  {%- if action !== 'remove' %}
+                    {% if action === 'create' %}{{ column }}: {%- endif -%}
+                      {
+                        {%- for attribute, options in attributes %}
+                          {{ attribute }}:
+                          {%- if options['key'] and ['type', 'defaultValue'].includes(attribute) -%}
+                            DataTypes.{{ options.key }}(
+                              {{- options.options|dump|safe -}}
+                            ),
+                          {%- else -%}
+                            {{- options|dump|safe }},
+                          {%- endif -%}
+                        {%- endfor %}
+                      },
+                  {%- endif %}
+                {%- endfor %}
+                {% if action === 'create' -%} }, {% endif %}
+              {%- endif %}
+            {%- endfor %}
+          ),
+        {%- endfor %}
+      {%- endfor %}
+  {% endfor %}
+}

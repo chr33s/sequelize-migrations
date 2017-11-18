@@ -17,7 +17,7 @@ class Test extends Model {
           }
         },
         description: {
-          type: DataTypes.STRING(100),
+          type: DataTypes.STRING,
           allowNull: false
         },
         age: {

@@ -7,11 +7,6 @@ const { join } = require('path')
 const Umzug = require('umzug')
 const fs = require('fs')
 
-const templates = {
-  table: fs.readFileSync('./template/table.njk', 'utf8'),
-  column: fs.readFileSync('./template/column.njk', 'utf8')
-}
-
 class Migration {
   constructor(options) {
     const { path = 'migrations', sequelize } = options || {}
@@ -20,7 +15,7 @@ class Migration {
 
     this.path = path
     this.sequelize = sequelize
-    this.templates = templates
+    this.template = this.template()
     this.log = sequelize.options.logging
     this.timestamp = new Date().toISOString().replace(/[^\d]/g, '')
     this.umzug = new Umzug({
@@ -96,8 +91,9 @@ class Migration {
     })
   }
 
-  template(type) {
-    return new Template(this.templates[type])
+  template() {
+    const file = fs.readFileSync('./index.njk', 'utf8')
+    return new Template(file)
   }
 
   stringify(json) {
@@ -126,85 +122,128 @@ class Migration {
     return fs.writeFileSync(path, migration, 'utf8')
   }
 
-  sync() {
-    const schema = this.schema()
-    const _schema = this.read('schema.json')
-    const _diff = diff(this.parse(_schema), this.parse(this.stringify(schema))) // JSON.parse -> rm: undefined
-    const batch = {}
+  reverse(up, _schema) {
+    const down = {}
 
-    for (let i in _diff) {
-      let d = _diff[i]
-      let [table, field, name, prop, attr] = d.path
+    for (const Type in up) {
+      const types = up[Type]
 
-      console.log(table, field, name, prop, attr, d)
+      down[Type] = {}
 
-      if (!batch[table]) {
-        batch[table] = {
-          options: []
+      for (let action in types) {
+        const actions = this.clone(types[action])
+
+        switch (action) {
+          case 'create':
+            action = 'drop'
+            break
+          case 'add':
+            action = 'remove'
+            break
+          case 'change':
+            // invert changes
+            for (const table in actions) {
+              const attributes = actions[table]
+
+              for (const attribute in attributes) {
+                actions[table][attribute] = _schema[table][attribute]
+              }
+            }
+            break
+          case 'remove':
+            action = 'add'
+            break
+          case 'drop':
+            action = 'create'
+            break
+        }
+
+        down[Type][action] = actions
+      }
+    }
+
+    return down
+  }
+
+  clone(obj) {
+    return this.parse(this.stringify(obj)) // !Object.assign nested references
+  }
+
+  name(migration) {
+    let path
+    for (const Type in migration) {
+      for (let action in migration[Type]) {
+        for (let table in migration[Type][action]) {
+          path = `${this.timestamp}-${action}-${Type.toLowerCase()}-${table}.js`
         }
       }
+    }
+    return path
+  }
+
+  sync() {
+    const schema = this.schema()
+    const _schema = this.parse(this.read('schema.json'))
+    const differences = diff(_schema, this.parse(this.stringify(schema))) || [] // JSON.* -> rm: undefined
+
+    for (const d of differences) {
+      const [table, field, name, prop, attr] = d.path
+      let migration = {}
 
       switch (d.kind) {
         case 'N':
           if (!field) {
-            batch[table].action = 'table'
-            batch[table].options = d.rhs
-          } else {
-            if (attr) break
+            if (!migration.Table) migration.Table = {}
+            if (!migration.Table.create) migration.Table.create = {}
 
-            batch[table].action = 'column'
-            batch[table].options.push({
-              action: 'add',
-              options: d.rhs,
-              name: field
-            })
+            migration.Table.create[table] = d.rhs
+          } else {
+            if (attr) break // FIXME
+
+            if (!migration.Column) migration.Column = {}
+            if (!migration.Column.add) migration.Column.add = {}
+
+            migration.Column.add[table] = {
+              [field]: d.rhs
+            }
           }
           break
         case 'D':
           if (!field) {
-            batch[table].create = false
-            batch[table].action = 'table'
-            batch[table].options = d.lhs
-          } else {
-            if (attr) break
+            if (!migration.Table) migration.Table = {}
+            if (!migration.Table.drop) migration.Table.drop = {}
 
-            batch[table].action = 'column'
-            batch[table].options.push({
-              action: 'remove',
-              options: d.lhs,
-              name: field
-            })
+            migration.Table.drop[table] = d.lhs
+          } else {
+            if (attr) break // FIXME
+
+            if (!migration.Column) migration.Column = {}
+            if (!migration.Column.remove) migration.Column.remove = {}
+
+            migration.Column.remove[table] = {
+              [field]: d.lhs
+            }
           }
           break
         case 'E':
           if (field) {
-            batch[table].action = 'column'
-            batch[table].options.push({
-              action: 'change',
-              options: {
-                [name]: {
-                  key: name === 'type' ? schema[table][field].type.key : null,
-                  [`_${prop}`]: d.lhs,
-                  [prop]: d.rhs
-                }
-              },
-              name: field
-            })
+            if (!migration.Column) migration.Column = {}
+            if (!migration.Column.change) migration.Column.change = {}
+
+            migration.Column.change[table] = {
+              [field]: this.clone(schema[table][field])
+            }
           }
           break
         case 'A':
+          console.log('A', table, field, name, prop, attr, d)
           break
       }
-    }
 
-    for (let table in batch) {
-      let { create = true, action, options } = batch[table]
-
-      console.log(table, action, options)
-
-      const template = this.template(action).render({ create, table, options })
-      const path = `${this.timestamp}-${action}-${table}.js`
-      const migration = this.format(template)
+      let path = this.name(migration)
+      migration = { up: migration, down: this.reverse(migration, _schema) }
+      const template = this.template.render({ migration })
+      migration = this.format(template)
 
       this.write(path, migration)
     }
