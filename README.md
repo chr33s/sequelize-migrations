@@ -1,7 +1,7 @@
 # Sequelize Migrations
 
-> Sync migrations with Sequelize model changes in development
-> Deploy diffed schema changes with a post[install, update] hook
+> Sync migrations with Sequelize model changes in development Deploy diffed
+> schema changes with a post[install, update] hook
 
 ## Install
 
@@ -34,15 +34,15 @@ options = {
 
 ### `migrations.sync()`
 
-Sync models changes to migrations
+Sync models changes to migration(s)
 
 ### `migrations.migrate(options = {})`
 
-Sync models changes to migrations with `options`.
+Migrate models changes to migration(s) with `options`.
 
 ### `migrations.rollback(options = {})`
 
-Sync models changes to migrations with `options`.
+Rollback models changes to migration(s) with `options`.
 
 ##### `options = {}`
 
