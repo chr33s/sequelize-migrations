@@ -1,6 +1,6 @@
 {
   "name": "@chr33s/sequelize-migrations",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "synced sequelize model migrations",
   "main": "index.js",
   "bin": {
@@ -26,15 +26,15 @@
     "node": ">=6.10.3"
   },
   "devDependencies": {
-    "mocha": "5.2.0",
-    "mysql2": "1.6.1",
-    "sequelize": "4.38.0"
+    "mocha": "6.1.3",
+    "mysql2": "1.6.5",
+    "sequelize": "4.43.0"
   },
   "dependencies": {
     "deep-diff": "1.0.2",
-    "nunjucks": "3.1.3",
-    "prettier": "1.14.2",
-    "umzug": "2.1.0",
-    "yargs": "12.0.1"
+    "nunjucks": "3.2.0",
+    "prettier": "1.16.4",
+    "umzug": "2.2.0",
+    "yargs": "13.2.2"
   }
 }

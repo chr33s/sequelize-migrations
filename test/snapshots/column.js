@@ -2,12 +2,22 @@
 
 module.exports = {
   up: (query, DataTypes) =>
-    query.changeColumn('example', 'description', {
-      type: DataTypes.STRING()
-    }),
+    query.changeColumn(
+      'example',
+
+      'description',
+      {
+        type: DataTypes.STRING()
+      }
+    ),
 
   down: (query, DataTypes) =>
-    query.changeColumn('example', 'description', {
-      type: DataTypes.TEXT()
-    })
+    query.changeColumn(
+      'example',
+
+      'description',
+      {
+        type: DataTypes.TEXT()
+      }
+    )
 }

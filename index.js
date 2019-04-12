@@ -87,6 +87,7 @@ class Migration {
   format(template) {
     return prettier.format(template, {
       singleQuote: true,
+      parser: 'babel',
       semi: false
     })
   }
